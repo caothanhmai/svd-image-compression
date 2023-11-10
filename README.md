@@ -16,3 +16,4 @@ Compression rate is controlled with the `compression_factor` global variable, de
 
 More compression would likely be achieved with minimal quality loss by forcing usage of lower-precision datatypes than the default float64. 
 # svd-image-compression
+# svd-image-compression
