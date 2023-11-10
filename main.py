@@ -1,71 +1,44 @@
-import math
-
-import cv2
+from scipy.linalg import svd
+import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib import pyplot as plt
-import matplotlib.image
+from PIL import Image
 
-compression_factor = 1  
+# Load your own color image
+image_path = './bachkhoa.jpg'
+image = np.array(Image.open(image_path))
 
+# Perform SVD separately for each color channel
+U_r, S_r, V_T_r = svd(image[:, :, 0], full_matrices=False)
+U_g, S_g, V_T_g = svd(image[:, :, 1], full_matrices=False)
+U_b, S_b, V_T_b = svd(image[:, :, 2], full_matrices=False)
 
-def load_image(path):
-    image = cv2.imread(path)
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB) 
-    return image
+# Diagonal matrices from singular values
+S_r = np.diag(S_r)
+S_g = np.diag(S_g)
+S_b = np.diag(S_b)
 
-def get_svd_compressed(singular_values, matrix_to_decompose):
-    (U, S, V) = np.linalg.svd(matrix_to_decompose, full_matrices=False)
-    U_c = U[:, :singular_values]
-    S_c = S[:singular_values]
-    V_c = V[:singular_values, :]
-    return (U_c, S_c, V_c)
+# Plot approximations for different ranks for each color channel
+fig, ax = plt.subplots(5, 2, figsize=(8, 20))
 
+curr_fig = 0
 
-def multiply_compressed(U, S, V):
-    return np.matmul(np.matmul(U, np.diag(S)), V)
+for r in [5, 10, 70, 100, 200]:
+    # Reconstruct each channel separately
+    image_approx = np.zeros_like(image)
+    for i, (U, S, V_T) in enumerate([(U_r, S_r, V_T_r), (U_g, S_g, V_T_g), (U_b, S_b, V_T_b)]):
+        image_approx[:, :, i] = U[:, :r] @ S[0:r, :r] @ V_T[:r, :]
 
+    print('origin')
+    ax[curr_fig][0].imshow(image_approx.astype(np.uint8))
+    ax[curr_fig][0].set_title("k = " + str(r))
+    ax[curr_fig, 0].axis('off')
 
-def reconstruct(compressed_image):
-    result = []
-    for element in compressed_image:
-        U, S, V = element
-        result.append(multiply_compressed(U, S, V))
-    return np.dstack(result).astype(np.uint8)
+    ax[curr_fig][1].set_title("Original Color Image")
+    print('test')
+    ax[curr_fig][1].imshow(image)
+    ax[curr_fig, 1].axis('off')
 
+    curr_fig += 1
 
-def get_compressed_image_size(compressed_image):
-    result = 0
-    counter = 0
-    for dim in compressed_image:
-        for element in dim:
-            result += element.size
-            counter += 1
-    print(f"Went through {counter} dimensions")
-    return result
-
-
-if __name__ == '__main__':
-    image = load_image("./logo.png")
-    print(f"Image shape when loaded: {image.shape}")
-    print(f"Original image size: {image.size}")
-
-    # split into 2d arrays for SVD
-    R, G, B = [image[:, :, i] for i in range(3)]
-    
-    no_of_singular_values = math.ceil(max(R.shape) * compression_factor)
-    compressed_image = [get_svd_compressed(no_of_singular_values, dim) for dim in (R, G, B)]
-    
-    compressed_size = get_compressed_image_size(compressed_image)
-    print(f"Compressed image size: {compressed_size}")
-
-    reconstructed_image = reconstruct(compressed_image)
-
-    space_saved = image.size - compressed_size
-    space_saved_percent = (1 - (compressed_size / image.size)) * 100
-    print(f"Space saved in bytes: {space_saved} ({space_saved_percent:.2f}%)")
-    
-    
-    plt.imshow(reconstructed_image, interpolation="nearest")
-    plt.show()
-    
-    matplotlib.image.imsave(f'Compressed-{space_saved_percent:.2f}%.png', reconstructed_image)
+print('ok')
+plt.show()
