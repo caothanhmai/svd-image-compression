@@ -30,7 +30,7 @@ for r in [5, 10, 70, 100, 200]:
     ax[curr_fig][0].set_title("k = " + str(r))
     ax[curr_fig, 0].axis('off')
 
-    ax[curr_fig][1].set_title("Original Image")
+    ax[curr_fig][1].set_title("Ảnh gốc")
     ax[curr_fig][1].imshow(logo, cmap='gray')
     ax[curr_fig, 1].axis('off')
 
